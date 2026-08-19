@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+
 <style>
 :root{
   --blue:#071b4d;
@@ -293,13 +296,6 @@ h1,h2,h3{
     0 0 35px #39d9ff88,
     0 8px 0 #041b50,
     0 20px 35px #0008;
-}
-
-.btn.big.locked{
-  background:linear-gradient(145deg,#273d61,#101f3c);
-  border-color:#ffffff14;
-  box-shadow:0 5px 0 #07101f;
-  cursor:not-allowed;
 }
 
 .status{
@@ -651,24 +647,6 @@ h1,h2,h3{
   font-size:13px;
 }
 
-.final{
-  text-align:center;
-  padding:30px 10px;
-}
-
-.final .emoji{
-  font-size:65px;
-}
-
-.final h2{
-  font-size:34px;
-  color:var(--gold);
-}
-
-.hidden{
-  display:none!important;
-}
-
 .room-info{
   text-align:center;
   color:var(--muted);
@@ -682,6 +660,29 @@ h1,h2,h3{
   color:var(--cyan);
   font-weight:800;
   font-family:monospace;
+}
+
+.sync-status{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  padding:8px 14px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:800;
+  background:#061633;
+  border:1px solid #4dff9a55;
+  color:#4dff9a;
+  z-index:50;
+}
+
+.sync-status.offline{
+  border-color:#ff7d8e55;
+  color:#ff7d8e;
+}
+
+.hidden{
+  display:none!important;
 }
 </style>
 </head>
@@ -709,7 +710,27 @@ h1,h2,h3{
 
 </div>
 
+<div class="sync-status" id="syncStatus">🟢 Connected</div>
+
 <script>
+
+/* ============================================================
+   FIREBASE INIT
+============================================================ */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCiDVOzoG6x2pspZs3uvzigTir18YtoMQ4",
+  authDomain: "anime-pick-battle.firebaseapp.com",
+  databaseURL: "https://anime-pick-battle-default-rtdb.asia-southeast1.firebaseio.com",
+  projectId: "anime-pick-battle",
+  storageBucket: "anime-pick-battle.firebasestorage.app",
+  messagingSenderId: "665318921799",
+  appId: "1:665318921799:web:eac5da6af99e80f7550362",
+  measurementId: "G-K42RTTWR0S"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
 /* ============================================================
    CONTENT
@@ -739,170 +760,101 @@ const MATH = [
 ];
 
 const TOD = [
-  {
-    truth:"What's the most embarrassing song on your playlist?",
-    dare:"Roll on the floor from one side of the room to the other."
-  },
-  {
-    truth:"What's a food combo you love that everyone else thinks is gross?",
-    dare:"Jump up and down 10 times, counting out loud."
-  },
-  {
-    truth:"What's the last thing you Googled?",
-    dare:"Say this out loud while skipping every word with the letter A: 'A cat and a rat ran away from a bad dragon.'"
-  },
-  {
-    truth:"What's a rule you always break?",
-    dare:"Put a small dab of shampoo in your hair and style it into a mohawk."
-  },
-  {
-    truth:"What's the pettiest thing you've ever argued about?",
-    dare:"Do 10 jumping jacks."
-  },
-  {
-    truth:"What app do you spend the most time on?",
-    dare:"Talk in a robot voice for the next 3 things you say."
-  },
-  {
-    truth:"What's a song you know all the words to but won't admit?",
-    dare:"Balance a book on your head for 30 seconds."
-  },
-  {
-    truth:"What's the weirdest thing in your bag or pockets?",
-    dare:"Do your best animal impression for 10 seconds."
-  },
-  {
-    truth:"Who was the last person you stalk-checked on social media?",
-    dare:"Let another player draw something silly on the back of your hand."
-  },
-  {
-    truth:"What's a talent nobody knows you have?",
-    dare:"Dance for 15 seconds with no music."
-  },
-  {
-    truth:"What's your most-used emoji?",
-    dare:"Hold a plank for 20 seconds."
-  },
-  {
-    truth:"What's something you pretend to understand but don't?",
-    dare:"Say the alphabet backwards."
-  },
-  {
-    truth:"What's the last lie you told?",
-    dare:"Try to lick your own elbow for 10 seconds."
-  },
-  {
-    truth:"What's a habit you're trying to break?",
-    dare:"Do 5 push-ups. Knees are fine."
-  },
-  {
-    truth:"What's the most trouble you've been in?",
-    dare:"Wear your socks on your hands until your next turn."
-  },
-  {
-    truth:"What's a fear you have that seems silly?",
-    dare:"Speak only in rhymes for your next 3 sentences."
-  },
-  {
-    truth:"What's your go-to karaoke song?",
-    dare:"Do your best impression of the person running this game."
-  },
-  {
-    truth:"What's the longest you've gone without showering?",
-    dare:"Freeze in the silliest pose you can make for 10 seconds."
-  },
-  {
-    truth:"What's a text you sent to the wrong person?",
-    dare:"Give every other player a genuine compliment."
-  },
-  {
-    truth:"What's your most irrational habit?",
-    dare:"Let the group pick a funny nickname for you for 3 rounds."
-  }
+  {truth:"What's the most embarrassing song on your playlist?",dare:"Roll on the floor from one side of the room to the other."},
+  {truth:"What's a food combo you love that everyone else thinks is gross?",dare:"Jump up and down 10 times, counting out loud."},
+  {truth:"What's the last thing you Googled?",dare:"Say this out loud while skipping every word with the letter A: 'A cat and a rat ran away from a bad dragon.'"},
+  {truth:"What's a rule you always break?",dare:"Put a small dab of shampoo in your hair and style it into a mohawk."},
+  {truth:"What's the pettiest thing you've ever argued about?",dare:"Do 10 jumping jacks."},
+  {truth:"What app do you spend the most time on?",dare:"Talk in a robot voice for the next 3 things you say."},
+  {truth:"What's a song you know all the words to but won't admit?",dare:"Balance a book on your head for 30 seconds."},
+  {truth:"What's the weirdest thing in your bag or pockets?",dare:"Do your best animal impression for 10 seconds."},
+  {truth:"Who was the last person you stalk-checked on social media?",dare:"Let another player draw something silly on the back of your hand."},
+  {truth:"What's a talent nobody knows you have?",dare:"Dance for 15 seconds with no music."},
+  {truth:"What's your most-used emoji?",dare:"Hold a plank for 20 seconds."},
+  {truth:"What's something you pretend to understand but don't?",dare:"Say the alphabet backwards."},
+  {truth:"What's the last lie you told?",dare:"Try to lick your own elbow for 10 seconds."},
+  {truth:"What's a habit you're trying to break?",dare:"Do 5 push-ups. Knees are fine."},
+  {truth:"What's the most trouble you've been in?",dare:"Wear your socks on your hands until your next turn."},
+  {truth:"What's a fear you have that seems silly?",dare:"Speak only in rhymes for your next 3 sentences."},
+  {truth:"What's your go-to karaoke song?",dare:"Do your best impression of the person running this game."},
+  {truth:"What's the longest you've gone without showering?",dare:"Freeze in the silliest pose you can make for 10 seconds."},
+  {truth:"What's a text you sent to the wrong person?",dare:"Give every other player a genuine compliment."},
+  {truth:"What's your most irrational habit?",dare:"Let the group pick a funny nickname for you for 3 rounds."}
 ];
 
 const CONTENT = {};
-
 for(let i=0;i<20;i++){
-  CONTENT[i*2+1] = {
-    type:"math",
-    ...MATH[i]
-  };
-
-  CONTENT[i*2+2] = {
-    type:"tod",
-    ...TOD[i]
-  };
+  CONTENT[i*2+1] = {type:"math", ...MATH[i]};
+  CONTENT[i*2+2] = {type:"tod", ...TOD[i]};
 }
-
-
-/* ============================================================
-   PRIZES
-============================================================ */
 
 const LOW_PRIZES = [10,20,30,40];
 const HIGH_PRIZES = [50,60,70,80,90,100];
 
 function shuffle(arr){
   const a=[...arr];
-
   for(let i=a.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
     [a[i],a[j]]=[a[j],a[i]];
   }
-
   return a;
 }
 
 function generatePrizes(){
   let prizes=[];
-
   for(const p of LOW_PRIZES){
     for(let i=0;i<3;i++){
       prizes.push(p);
     }
   }
-
   for(const p of HIGH_PRIZES){
     prizes.push(p);
     prizes.push(p);
   }
-
   for(let i=0;i<16;i++){
     prizes.push(LOW_PRIZES[i % LOW_PRIZES.length]);
   }
 
   let result;
-
   for(let attempt=0;attempt<500;attempt++){
     result=shuffle(prizes);
     let valid=true;
-
     for(let i=2;i<result.length;i++){
       if(result[i]===result[i-1] && result[i]===result[i-2]){
         valid=false;
         break;
       }
     }
-
     if(valid) break;
   }
-
   return result;
 }
 
-
 /* ============================================================
-   ROOM & STORAGE
+   STATE
 ============================================================ */
 
-function generateRoomId(){
-  return Math.random().toString(36).substring(2,8).toUpperCase();
-}
+let state = null;
+let gameRef = null;
+let roomId = getRoomIdFromUrl() || generateRoomId();
+let loading = true;
+let pendingId = null;
+let pendingChoice = null;
+let revealAnswer = false;
+let answerCorrect = null;
+let editingInput = false;
+let isOnline = true;
+
+const app = document.getElementById("app");
+const syncStatus = document.getElementById("syncStatus");
 
 function getRoomIdFromUrl(){
   const params = new URLSearchParams(window.location.search);
   return params.get('room') || null;
+}
+
+function generateRoomId(){
+  return Math.random().toString(36).substring(2,8).toUpperCase();
 }
 
 function updateUrlWithRoom(roomId){
@@ -911,98 +863,66 @@ function updateUrlWithRoom(roomId){
   window.history.replaceState({}, '', url);
 }
 
-const DEFAULT_PLAYERS = Array.from({length:10}, (_,i)=>`Player ${i+1}`);
+/* ============================================================
+   FIREBASE SYNC
+============================================================ */
 
-function defaultState(){
-  return {
-    version:4,
-    roomId: "",
-    started:false,
-    playerCount:10,
-    players:[...DEFAULT_PLAYERS],
-    joined:Array(10).fill(false),
-    prizes:[],
-    entries:{},
-    winner:null,
-    turnActive:false,
-    turnId:0,
-    logs:[],
-    finished:false
-  };
+function initializeFirebaseSync(){
+  updateUrlWithRoom(roomId);
+  gameRef = database.ref(`games/${roomId}`);
+
+  gameRef.on('value', snapshot => {
+    if(!snapshot.exists()){
+      state = defaultState();
+    }else{
+      state = snapshot.val();
+    }
+    loading = false;
+    render();
+  });
+
+  database.ref('.info/connected').on('value', snap => {
+    isOnline = snap.val() === true;
+    updateSyncStatus();
+  });
 }
 
-async function loadState(){
-  try{
-    const roomId = getRoomIdFromUrl();
-    if(!roomId) return defaultState();
-
-    const res = await window.storage.get(`game:${roomId}`, true);
-
-    if(!res){
-      const newState = defaultState();
-      newState.roomId = roomId;
-      return newState;
-    }
-
-    const saved = JSON.parse(res.value);
-    const fresh = defaultState();
-
-    return {
-      ...fresh,
-      ...saved,
-      roomId: roomId,
-      players: Array.isArray(saved.players) ? saved.players : fresh.players,
-      joined: Array.isArray(saved.joined) ? saved.joined : fresh.joined,
-      entries: saved.entries || {},
-      logs: Array.isArray(saved.logs) ? saved.logs : []
-    };
-
-  }catch(err){
-    console.error(err);
-    return defaultState();
+function updateSyncStatus(){
+  if(isOnline){
+    syncStatus.textContent = "🟢 Connected";
+    syncStatus.classList.remove('offline');
+  }else{
+    syncStatus.textContent = "🔴 Offline";
+    syncStatus.classList.add('offline');
   }
 }
 
 async function saveState(){
   try{
-    if(!state.roomId){
-      saveError=true;
-      return false;
-    }
-
-    await window.storage.set(
-      `game:${state.roomId}`,
-      JSON.stringify(state),
-      true
-    );
-
-    saveError=false;
+    await gameRef.set(state);
     return true;
-
   }catch(err){
-    console.error("Save failed:",err);
-    saveError=true;
+    console.error("Save failed:", err);
     return false;
   }
 }
 
-
-/* ============================================================
-   LOCAL APP STATE
-============================================================ */
-
-let state=null;
-let loading=true;
-let saveError=false;
-let pendingId=null;
-let pendingChoice=null;
-let revealAnswer=false;
-let answerCorrect=null;
-let editingInput=false;
-let pollTimer=null;
-
-const app=document.getElementById("app");
-
+function defaultState(){
+  return {
+    roomId: roomId,
+    started: false,
+    playerCount: 10,
+    players: Array.from({length:10}, (_,i)=>`Player ${i+1}`),
+    joined: Array(10).fill(false),
+    prizes: [],
+    entries: {},
+    winner: null,
+    turnActive: false,
+    turnId: 0,
+    logs: [],
+    finished: false
+  };
+}
 
 /* ============================================================
    HELPERS
@@ -1018,14 +938,8 @@ function escapeHtml(value){
   }[c]));
 }
 
-function usedIds(){
-  return Object.keys(state.entries).map(Number);
-}
-
 function activePlayers(){
-  return state.players
-    .slice(0,state.playerCount)
-    .filter((_,i)=>state.joined[i]);
+  return state.players.slice(0,state.playerCount).filter((_,i)=>state.joined[i]);
 }
 
 function activePlayerCount(){
@@ -1037,10 +951,7 @@ function playerName(index){
 }
 
 function getWinner(){
-  if(state.winner === null || state.winner === undefined){
-    return null;
-  }
-  return state.winner;
+  return state.winner === null ? null : state.winner;
 }
 
 function randomId(){
@@ -1072,7 +983,6 @@ function copyToClipboard(text){
   });
 }
 
-
 /* ============================================================
    RENDER
 ============================================================ */
@@ -1094,7 +1004,6 @@ function render(){
     renderModal();
   }
 }
-
 
 /* ============================================================
    LOBBY
@@ -1171,8 +1080,6 @@ function renderLobby(){
         </button>
       </div>
 
-      ${saveError ? `<p class="status" style="color:#ff7d8e">Could not save. Please try again.</p>` : ""}
-
     </div>
 
     <div class="panel">
@@ -1219,7 +1126,6 @@ function renderLobby(){
     state.joined = state.joined.slice(0, state.playerCount);
 
     await saveState();
-    render();
   });
 
   app.querySelectorAll(".setup-grid input").forEach(input=>{
@@ -1251,13 +1157,11 @@ function renderLobby(){
     });
 
     await saveState();
-    render();
     toast("Player list updated!");
   });
 
   document.getElementById("startBtn").addEventListener("click", startGame);
 }
-
 
 /* ============================================================
    START GAME
@@ -1286,17 +1190,15 @@ async function startGame(){
   state.logs = [];
 
   await saveState();
-  render();
   toast("GAME STARTED! FIRST TO CLICK!");
 }
-
 
 /* ============================================================
    GAME BOARD
 ============================================================ */
 
 function renderGame(){
-  const used = new Set(usedIds());
+  const used = new Set(Object.keys(state.entries).map(Number));
   const remaining = 40-used.size;
 
   let tiles="";
@@ -1395,7 +1297,7 @@ function renderGame(){
     </div>
 
     <p class="status">
-      ${saveError ? "⚠️ Connection/save problem." : "🟢 Live game — updates are shared."}
+      ${isOnline ? "🟢 Live game — syncing in real-time!" : "⚠️ Offline mode"}
     </p>
   `;
 
@@ -1414,39 +1316,25 @@ function renderGame(){
   document.getElementById("resetBtn").addEventListener("click", resetGame);
 }
 
-
 /* ============================================================
    FIRST-TO-CLICK
 ============================================================ */
 
 async function claimTurn(){
-  const fresh = await loadState();
-
-  if(fresh.started && fresh.turnActive && fresh.winner===null){
+  if(state.started && state.turnActive && state.winner===null){
     const playerIndex = chooseLocalPlayer();
     if(playerIndex===null) return;
 
-    const latest = await loadState();
+    state.winner = playerIndex;
+    state.turnActive = false;
+    state.turnId = randomId();
 
-    if(latest.winner!==null || !latest.turnActive){
-      state=latest;
-      render();
-      toast("Too slow! Another player clicked first.");
-      return;
-    }
-
-    latest.winner = playerIndex;
-    latest.turnActive = false;
-    latest.turnId = randomId();
-
-    latest.logs.push({
-      text: `${playerNameFromState(latest, playerIndex)} won the click race!`,
+    state.logs.push({
+      text: `${playerName(playerIndex)} won the click race!`,
       time: Date.now()
     });
 
-    state=latest;
     await saveState();
-    render();
     toast("⚡ You won the click race!");
   }
 }
@@ -1495,11 +1383,6 @@ function chooseLocalPlayer(){
   return index;
 }
 
-function playerNameFromState(s,index){
-  return s.players[index] || `Player ${index+1}`;
-}
-
-
 /* ============================================================
    CHOOSE NUMBER
 ============================================================ */
@@ -1521,7 +1404,6 @@ async function chooseNumber(n){
   answerCorrect=null;
   render();
 }
-
 
 /* ============================================================
    MODAL
@@ -1658,7 +1540,6 @@ function renderModal(){
   }
 }
 
-
 /* ============================================================
    COMMIT PICK
 ============================================================ */
@@ -1704,7 +1585,6 @@ async function commitPick(){
   answerCorrect=null;
 
   await saveState();
-  render();
 
   if(state.finished){
     toast("🏆 GAME FINISHED!");
@@ -1712,7 +1592,6 @@ async function commitPick(){
     toast("⚡ Ready for the next fastest click!");
   }
 }
-
 
 /* ============================================================
    RESET
@@ -1722,83 +1601,20 @@ async function resetGame(){
   if(!confirm("Reset the entire game for everyone?")) return;
 
   state=defaultState();
-  state.roomId = getRoomIdFromUrl();
   pendingId=null;
   pendingChoice=null;
   revealAnswer=false;
   answerCorrect=null;
 
   await saveState();
-  render();
   toast("Game reset.");
 }
-
-
-/* ============================================================
-   LIVE POLLING
-============================================================ */
-
-async function poll(){
-  if(loading || editingInput) return;
-  if(pendingId!==null) return;
-
-  try{
-    const fresh = await loadState();
-    const oldJSON = JSON.stringify(state);
-    const newJSON = JSON.stringify(fresh);
-
-    if(oldJSON!==newJSON){
-      const active = document.activeElement;
-      if(active && active.matches && active.matches(".setup-grid input")) return;
-
-      state=fresh;
-      render();
-    }
-  }catch(err){
-    console.error("Polling error:", err);
-  }
-}
-
 
 /* ============================================================
    BOOT
 ============================================================ */
 
-async function boot(){
-  let roomId = getRoomIdFromUrl();
-
-  if(!roomId){
-    roomId = generateRoomId();
-    updateUrlWithRoom(roomId);
-  }
-
-  state = await loadState();
-  if(!state.roomId){
-    state.roomId = roomId;
-  }
-
-  loading=false;
-
-  if(!Array.isArray(state.players)){
-    state.players = [...DEFAULT_PLAYERS];
-  }
-
-  if(!Array.isArray(state.joined)){
-    state.joined = Array(state.playerCount).fill(false);
-  }
-
-  while(state.players.length < state.playerCount){
-    state.players.push(`Player ${state.players.length+1}`);
-    state.joined.push(false);
-  }
-
-  await saveState();
-  render();
-
-  pollTimer = setInterval(poll, 1000);
-}
-
-boot();
+initializeFirebaseSync();
 
 </script>
 
