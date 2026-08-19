@@ -8,9 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
-
 <style>
 :root{
   --blue:#071b4d;
@@ -1614,7 +1611,45 @@ async function resetGame(){
    BOOT
 ============================================================ */
 
-initializeFirebaseSync();
+// Wait for Firebase to load
+function waitForFirebase() {
+  if(typeof firebase !== 'undefined') {
+    initializeFirebaseSync();
+  } else {
+    setTimeout(waitForFirebase, 100);
+  }
+}
+
+// Load Firebase scripts
+const script1 = document.createElement('script');
+script1.src = 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+script1.async = true;
+
+const script2 = document.createElement('script');
+script2.src = 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+script2.async = true;
+
+script1.onload = () => {
+  document.body.appendChild(script2);
+  script2.onload = () => {
+    waitForFirebase();
+  };
+  script2.onerror = () => {
+    console.error('Failed to load Firebase database script');
+    showError('Failed to connect to Firebase. Please refresh the page.');
+  };
+};
+
+script1.onerror = () => {
+  console.error('Failed to load Firebase app script');
+  showError('Failed to connect to Firebase. Please refresh the page.');
+};
+
+document.head.appendChild(script1);
+
+function showError(msg) {
+  app.innerHTML = `<div class="panel" style="background: #ff536815; border-color: #ff536855;"><p class="status" style="color: #ff8d9d;">${msg}</p></div>`;
+}
 
 </script>
 
